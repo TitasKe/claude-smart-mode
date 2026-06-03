@@ -7,9 +7,7 @@ SETTINGS="$CLAUDE_DIR/settings.json"
 echo "Uninstalling claude-smart-mode..."
 rm -f \
   "$CLAUDE_DIR/commands/smart.md" \
-  "$CLAUDE_DIR/commands/effort.md" \
   "$CLAUDE_DIR/smart-inject.md" \
-  "$CLAUDE_DIR/ultracode-inject.md" \
   "$CLAUDE_DIR/smart-toggle.sh" \
   "$CLAUDE_DIR/smart-uninstall.sh"
 

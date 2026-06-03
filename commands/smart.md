@@ -44,7 +44,6 @@ Before classifying, read `~/.claude/smart-config.md` if it exists and apply any 
 | **standard** | `sonnet[1m]` | `high` | Multi-file change, moderate bug, add endpoint *(default)* |
 | **deep** | `opus` | `xhigh` | Hard bug, complex algorithm, cross-cutting concern |
 | **architect** | `opus[1m]` | `xhigh` | System design, large refactor, new subsystem |
-| **ultracode** | `opus[1m]` | `xhigh` | Dynamic workflow mode for complex multi-workstream tasks |
 
 Default to **standard** when unsure.
 
@@ -55,20 +54,18 @@ Default to **standard** when unsure.
 | **plan** | explain, review, analyze, plan, design, document, audit, summarize, "what/why/how does X" | `plan` |
 | **impl** | implement, fix, refactor, build, write code, add feature, run, migrate, deploy, create files | `auto` |
 
-**architect and ultracode tiers always force `plan` permission mode**, regardless of nature.
-
-Choose **ultracode** when the task explicitly mentions ultracode, dynamic workflow, orchestration, many subagents, or a complex task that clearly benefits from parallel workstreams. When tier is ultracode, read `~/.claude/ultracode-inject.md` if it exists and follow it.
+**architect** tier always forces `plan` permission mode, regardless of nature.
 
 ### EnterPlanMode
 
-Call `EnterPlanMode` for **architect** tier, and for **ultracode** tier when a dynamic workflow is warranted.
+Call `EnterPlanMode` for **architect** tier.
 
 ### Step — Apply configuration
 
 1. Read `~/.claude/settings.json`.
 2. If model or effortLevel differs from the chosen tier → update those two fields only.
 3. If `permissions.defaultMode` differs from the chosen permission mode → update that field only.
-4. Print one line: `[smart] tier=X nature=plan|impl model=Y effort=Z perm=plan|auto plan=yes|no dynamic_workflow=yes|no|auto`
+4. Print one line: `[smart] tier=X nature=plan|impl model=Y effort=Z perm=plan|auto plan=yes|no`
 
 ### Step — Execute
 

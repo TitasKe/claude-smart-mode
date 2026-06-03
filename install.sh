@@ -10,9 +10,7 @@ echo "Installing claude-smart-mode..."
 mkdir -p "$COMMANDS_DIR"
 
 install -m 644 "$SCRIPT_DIR/commands/smart.md" "$COMMANDS_DIR/smart.md"
-install -m 644 "$SCRIPT_DIR/commands/effort.md" "$COMMANDS_DIR/effort.md"
 install -m 644 "$SCRIPT_DIR/smart-inject.md" "$CLAUDE_DIR/smart-inject.md"
-install -m 644 "$SCRIPT_DIR/ultracode-inject.md" "$CLAUDE_DIR/ultracode-inject.md"
 install -m 755 "$SCRIPT_DIR/smart-toggle.sh" "$CLAUDE_DIR/smart-toggle.sh"
 install -m 755 "$SCRIPT_DIR/uninstall.sh" "$CLAUDE_DIR/smart-uninstall.sh"
 
@@ -86,6 +84,5 @@ echo
 echo "Done. Restart Claude Code, then:"
 echo "  /smart                  - toggle smart mode ON/OFF for the session"
 echo "  /smart <task>           - one-shot smart routing for a single task"
-echo "  /effort ultracode       - toggle ultracode dynamic workflow mode"
 echo "  smart doctor            - check install health"
 echo "  smart --why \"task\"      - explain route selection"

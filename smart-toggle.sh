@@ -6,15 +6,12 @@ CONFIG_ENV="$CLAUDE_DIR/smart-config.env"
 CONFIG_MD="$CLAUDE_DIR/smart-config.md"
 SETTINGS="$CLAUDE_DIR/settings.json"
 STATE_FILE="/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}"
-ULTRACODE_STATE_FILE="/tmp/claude-smart-ultracode-${CLAUDE_SESSION_ID:-default}"
 
 NANO_MODEL="haiku"
 LIGHT_MODEL="sonnet"
 STANDARD_MODEL="sonnet[1m]"
 DEEP_MODEL="opus"
 ARCHITECT_MODEL="opus[1m]"
-ULTRACODE_MODEL="opus[1m]"
-ULTRACODE_SUBAGENT_LIMIT="8"
 
 usage() {
   cat <<'EOF'
@@ -25,8 +22,6 @@ Usage:
   smart why "task"         Explain route selection without running Claude.
   smart models             Show configured tier model mapping.
   smart config init|show|path
-  smart effort ultracode     Toggle ultracode dynamic workflow mode.
-  smart effort status        Show effort state.
   smart release-check      Check repo readiness before publishing.
   smart uninstall          Remove installed files and managed hooks.
 EOF
@@ -51,8 +46,6 @@ load_config() {
       STANDARD_MODEL) STANDARD_MODEL="$value" ;;
       DEEP_MODEL) DEEP_MODEL="$value" ;;
       ARCHITECT_MODEL) ARCHITECT_MODEL="$value" ;;
-      ULTRACODE_MODEL) ULTRACODE_MODEL="$value" ;;
-      ULTRACODE_SUBAGENT_LIMIT) ULTRACODE_SUBAGENT_LIMIT="$value" ;;
     esac
   done < "$CONFIG_ENV"
 }
@@ -67,37 +60,9 @@ toggle() {
   fi
 }
 
-effort_cmd() {
-  local sub="${1:-status}"
-  case "$sub" in
-    ultracode)
-      if [[ -f "$ULTRACODE_STATE_FILE" ]]; then
-        rm "$ULTRACODE_STATE_FILE"
-        echo "Ultracode OFF"
-      else
-        touch "$ULTRACODE_STATE_FILE"
-        echo "Ultracode ON - Claude will run at xhigh and decide when complex tasks warrant a dynamic workflow with coordinated subagents."
-      fi
-      ;;
-    off)
-      rm -f "$ULTRACODE_STATE_FILE"
-      echo "Ultracode OFF"
-      ;;
-    status)
-      echo "smart=$([[ -f "$STATE_FILE" ]] && echo ON || echo OFF)"
-      echo "ultracode=$([[ -f "$ULTRACODE_STATE_FILE" ]] && echo ON || echo OFF)"
-      ;;
-    *)
-      echo "Usage: smart effort ultracode|off|status" >&2
-      return 2
-      ;;
-  esac
-}
-
 status() {
   echo "claude-smart-mode"
   echo "  state:    $([[ -f "$STATE_FILE" ]] && echo ON || echo OFF)"
-  echo "  ultra:    $([[ -f "$ULTRACODE_STATE_FILE" ]] && echo ON || echo OFF)"
   echo "  settings: $SETTINGS"
   echo "  config:   $CONFIG_ENV"
   echo "  prompt:   $CONFIG_MD"
@@ -130,8 +95,6 @@ doctor() {
     echo "warn managed hooks not found in settings"
   fi
   [[ -f "$CONFIG_ENV" ]] && echo "ok   config env exists" || echo "info config env not found; run: smart config init"
-  [[ -f "$CLAUDE_DIR/commands/effort.md" ]] && echo "ok   /effort command installed" || echo "warn /effort command missing"
-  [[ -f "$CLAUDE_DIR/ultracode-inject.md" ]] && echo "ok   ultracode injection prompt installed" || echo "warn ultracode injection prompt missing"
   return "$failed"
 }
 
@@ -146,7 +109,6 @@ why() {
   local effort="high"
   local perm="auto"
   local plan="no"
-  local dynamic="no"
   local reasons=()
 
   [[ "$prompt_lc" =~ (explain|what\ does|what\ is|why\ does|how\ does|summari[sz]e|review|audit|analy[sz]e|plan|design|document|docs) ]] && nature="plan" && reasons+=("nature=plan matched analysis/review/documentation signals")
@@ -155,7 +117,6 @@ why() {
   [[ "$prompt_lc" =~ (small|single-file|one\ file) ]] && tier="light" && reasons+=("tier=light matched small task signals")
   [[ "$prompt_lc" =~ (hard|complex|security|auth|login|production|deploy|migration|billing|stripe|database) ]] && tier="deep" && reasons+=("tier=deep matched high-risk/deep-work signals")
   [[ "$prompt_lc" =~ (architecture|architect|system\ design|large\ refactor|new\ subsystem) ]] && tier="architect" && nature="plan" && reasons+=("tier=architect matched architecture signals")
-  [[ "$prompt_lc" =~ (ultracode|dynamic\ workflow|subagents|sub-agents|orchestrat) ]] && tier="ultracode" && nature="plan" && reasons+=("tier=ultracode matched dynamic workflow/subagent signals")
 
   case "$tier" in
     nano) model="$NANO_MODEL"; effort="low" ;;
@@ -163,11 +124,10 @@ why() {
     standard) model="$STANDARD_MODEL"; effort="high" ;;
     deep) model="$DEEP_MODEL"; effort="xhigh" ;;
     architect) model="$ARCHITECT_MODEL"; effort="xhigh"; plan="yes" ;;
-    ultracode) model="$ULTRACODE_MODEL"; effort="xhigh"; plan="yes"; dynamic="yes-if-warranted" ;;
   esac
   [[ "$nature" == "plan" ]] && perm="plan"
 
-  echo "[smart] tier=$tier nature=$nature model=$model effort=$effort perm=$perm plan=$plan dynamic_workflow=$dynamic"
+  echo "[smart] tier=$tier nature=$nature model=$model effort=$effort perm=$perm plan=$plan"
   echo "why:"
   if [[ ${#reasons[@]} -eq 0 ]]; then
     echo "  - default route"
@@ -184,7 +144,6 @@ light      $LIGHT_MODEL      normal
 standard   $STANDARD_MODEL   high
 deep       $DEEP_MODEL       xhigh
 architect  $ARCHITECT_MODEL  xhigh
-ultracode  $ULTRACODE_MODEL  xhigh dynamic-workflow-auto
 EOF
 }
 
@@ -198,8 +157,6 @@ LIGHT_MODEL=sonnet
 STANDARD_MODEL=sonnet[1m]
 DEEP_MODEL=opus
 ARCHITECT_MODEL=opus[1m]
-ULTRACODE_MODEL=opus[1m]
-ULTRACODE_SUBAGENT_LIMIT=8
 EOF
     echo "Created $CONFIG_ENV"
   else
@@ -273,13 +230,6 @@ case "${1:-toggle}" in
   models)
     shift || true
     models "$@"
-    ;;
-  effort)
-    shift || true
-    effort_cmd "$@"
-    ;;
-  ultracode)
-    effort_cmd ultracode
     ;;
   config)
     shift || true
