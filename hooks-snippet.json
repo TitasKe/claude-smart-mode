@@ -1,0 +1,24 @@
+{
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash -c '[ -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\" ] && cat ~/.claude/smart-inject.md || true'"
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash -c 'rm -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\"'"
+        }
+      ]
+    }
+  ]
+}
