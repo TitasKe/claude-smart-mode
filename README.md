@@ -21,6 +21,7 @@ When ON, every prompt is classified on **two axes** before Claude responds:
 | standard | sonnet[1m] | high | Multi-file work *(default)* |
 | deep | opus | xhigh | Hard bugs, complex reasoning |
 | architect | opus[1m] | xhigh | System design, large refactors |
+| ultracode | opus[1m] | xhigh | Dynamic workflow orchestration for complex tasks |
 
 **Axis 2 — Task nature** (controls permission mode):
 
@@ -42,6 +43,42 @@ Each response starts with a single line like:
 ```
 Runs smart routing on that task only, without affecting the session toggle.
 
+### Maintenance commands
+```
+/smart doctor
+/smart status
+/smart --why "fix auth bug in production"
+/smart models
+/smart config init
+/smart release-check
+```
+
+### Ultracode effort
+```
+/effort ultracode
+```
+
+`ultracode` is an xhigh effort mode that lets Claude decide whether a task warrants a dynamic workflow. When it does, Claude acts as the orchestrator, writes a short orchestration brief, and can fan out focused workstreams to subagents before merging and verifying the final result.
+
+Use it for genuinely complex tasks: large refactors, hard bugs, security/auth work, migrations, release work, broad audits, and tasks that benefit from parallel investigation. It intentionally avoids dynamic workflows for small edits and simple questions.
+
+Turn it off:
+```
+/effort off
+```
+
+Shell alias equivalents:
+```
+smart doctor
+smart status
+smart why "fix auth bug in production"
+smart models
+smart config init
+smart effort ultracode
+smart release-check
+smart uninstall
+```
+
 ## Install
 
 ```bash
@@ -59,6 +96,7 @@ After install you get two ways to toggle:
 |--------|-------|-------|
 | `smart` (shell alias) | any terminal | instant — no Claude involved |
 | `/smart` (slash command) | inside Claude Code | fast — single bash call |
+| `/effort ultracode` | inside Claude Code | toggles dynamic workflow mode |
 
 ## Manual install
 
@@ -71,10 +109,47 @@ After install you get two ways to toggle:
 
 - `/smart` (toggle) creates/deletes `/tmp/claude-smart-<session-id>` — a session-scoped flag file
 - A `UserPromptSubmit` hook checks for that file on every prompt; if present, injects `smart-inject.md` as context
+- `/effort ultracode` creates/deletes `/tmp/claude-smart-ultracode-<session-id>` and injects `ultracode-inject.md`
 - A `Stop` hook cleans up the flag file when the session ends, so new sessions always start with smart mode OFF
 - When smart mode picks a different model/effort than your current settings, it patches `~/.claude/settings.json` directly (model + effortLevel only)
+- `install.sh` safely merges the managed hooks into existing Claude settings and writes a timestamped backup before editing
+- `smart release-check` verifies shell syntax, obvious secret patterns, and git author metadata before publishing
+
+## Config
+
+Run:
+```
+smart config init
+```
+
+This creates:
+```
+~/.claude/smart-config.env
+~/.claude/smart-config.md
+```
+
+`smart-config.env` customizes shell-side model mappings:
+```
+NANO_MODEL=haiku
+LIGHT_MODEL=sonnet
+STANDARD_MODEL=sonnet[1m]
+DEEP_MODEL=opus
+ARCHITECT_MODEL=opus[1m]
+ULTRACODE_MODEL=opus[1m]
+ULTRACODE_SUBAGENT_LIMIT=8
+```
+
+`smart-config.md` is injected alongside smart mode so you can add personal routing preferences.
+
+## Uninstall
+
+```
+smart uninstall
+```
+
+The uninstaller removes only the managed smart-mode command files, managed hook entries, and managed shell alias. It writes a settings backup before changing `~/.claude/settings.json`.
 
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) CLI
-- `node` or `python3` (for the installer's JSON patching)
+- `python3` (for safe JSON hook merging)

@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "bash -c '[ -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\" ] && cat ~/.claude/smart-inject.md || true'"
+          "command": "bash -c '{ [ -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\" ] && { [ -f ~/.claude/smart-config.md ] && cat ~/.claude/smart-config.md; cat ~/.claude/smart-inject.md; }; [ -f \"/tmp/claude-smart-ultracode-${CLAUDE_SESSION_ID:-default}\" ] && cat ~/.claude/ultracode-inject.md; } || true'"
         }
       ]
     }
@@ -16,7 +16,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "bash -c 'rm -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\"'"
+          "command": "bash -c 'rm -f \"/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}\" \"/tmp/claude-smart-ultracode-${CLAUDE_SESSION_ID:-default}\"'"
         }
       ]
     }

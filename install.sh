@@ -1,72 +1,91 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CLAUDE_DIR="$HOME/.claude"
 COMMANDS_DIR="$CLAUDE_DIR/commands"
 SETTINGS="$CLAUDE_DIR/settings.json"
 
 echo "Installing claude-smart-mode..."
-
-# Create commands dir if needed
 mkdir -p "$COMMANDS_DIR"
 
-# Copy command and inject files
-cp commands/smart.md "$COMMANDS_DIR/smart.md"
-cp smart-inject.md "$CLAUDE_DIR/smart-inject.md"
-cp smart-toggle.sh "$CLAUDE_DIR/smart-toggle.sh"
-chmod +x "$CLAUDE_DIR/smart-toggle.sh"
+install -m 644 "$SCRIPT_DIR/commands/smart.md" "$COMMANDS_DIR/smart.md"
+install -m 644 "$SCRIPT_DIR/commands/effort.md" "$COMMANDS_DIR/effort.md"
+install -m 644 "$SCRIPT_DIR/smart-inject.md" "$CLAUDE_DIR/smart-inject.md"
+install -m 644 "$SCRIPT_DIR/ultracode-inject.md" "$CLAUDE_DIR/ultracode-inject.md"
+install -m 755 "$SCRIPT_DIR/smart-toggle.sh" "$CLAUDE_DIR/smart-toggle.sh"
+install -m 755 "$SCRIPT_DIR/uninstall.sh" "$CLAUDE_DIR/smart-uninstall.sh"
+
+if [[ ! -f "$CLAUDE_DIR/smart-config.env" ]]; then
+  install -m 644 "$SCRIPT_DIR/smart-config.env" "$CLAUDE_DIR/smart-config.env"
+fi
+if [[ ! -f "$CLAUDE_DIR/smart-config.md" ]]; then
+  install -m 644 "$SCRIPT_DIR/smart-config.md" "$CLAUDE_DIR/smart-config.md"
+fi
 
 echo "Copied command files."
 
-# Add shell alias
-SHELL_RC="$HOME/.zshrc"
-[ -n "$BASH_VERSION" ] && SHELL_RC="$HOME/.bashrc"
+SMART_ALIAS_START="# >>> claude-smart-mode smart alias >>>"
+for SHELL_RC in "$HOME/.zshrc" "$HOME/.bashrc"; do
+  if [[ -f "$SHELL_RC" ]] && grep -q "$SMART_ALIAS_START" "$SHELL_RC"; then
+    echo "Shell smart alias already exists in $SHELL_RC"
+  elif grep -q "alias smart='bash ~/.claude/smart-toggle.sh'" "$SHELL_RC" 2>/dev/null; then
+    echo "Legacy smart alias already exists in $SHELL_RC"
+  else
+    cat >> "$SHELL_RC" <<'EOF'
 
-if grep -q "alias smart=" "$SHELL_RC" 2>/dev/null; then
-  echo "Shell alias already exists in $SHELL_RC, skipping."
-else
-  echo "\nalias smart='bash ~/.claude/smart-toggle.sh'" >> "$SHELL_RC"
-  echo "Added 'smart' alias to $SHELL_RC — run 'source $SHELL_RC' or restart your terminal."
-fi
+# >>> claude-smart-mode smart alias >>>
+alias smart='bash ~/.claude/smart-toggle.sh'
+# <<< claude-smart-mode smart alias <<<
+EOF
+    echo "Added 'smart' alias to $SHELL_RC"
+  fi
+done
 
-# Patch settings.json with the hooks
-if [ ! -f "$SETTINGS" ]; then
+if [[ ! -f "$SETTINGS" ]]; then
   echo '{}' > "$SETTINGS"
 fi
 
-# Check if hooks already exist
-if grep -q '"UserPromptSubmit"' "$SETTINGS"; then
-  echo ""
-  echo "WARNING: Your settings.json already has hooks defined."
-  echo "Merge the following into $SETTINGS manually:"
-  cat hooks-snippet.json
-  echo ""
-else
-  # Use node if available, otherwise python3
-  if command -v node &>/dev/null; then
-    node -e "
-      const fs = require('fs');
-      const settings = JSON.parse(fs.readFileSync('$SETTINGS', 'utf8'));
-      const hooks = JSON.parse(fs.readFileSync('hooks-snippet.json', 'utf8'));
-      settings.hooks = hooks;
-      fs.writeFileSync('$SETTINGS', JSON.stringify(settings, null, 2));
-    "
-  elif command -v python3 &>/dev/null; then
-    python3 -c "
-import json
-with open('$SETTINGS') as f: s = json.load(f)
-with open('hooks-snippet.json') as f: h = json.load(f)
-s['hooks'] = h
-with open('$SETTINGS', 'w') as f: json.dump(s, f, indent=2)
-"
-  else
-    echo "No node or python3 found. Merge hooks-snippet.json into $SETTINGS manually."
-    exit 1
-  fi
-  echo "Hooks added to settings.json."
-fi
+cp "$SETTINGS" "$SETTINGS.smart-backup.$(date +%Y%m%d-%H%M%S)"
 
-echo ""
-echo "Done! Restart Claude Code, then:"
-echo "  /smart          — toggle smart mode ON/OFF for the session"
-echo "  /smart <task>   — one-shot smart routing for a single task"
+python3 - "$SETTINGS" "$SCRIPT_DIR/hooks-snippet.json" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1])
+snippet_path = Path(sys.argv[2])
+
+settings = json.loads(settings_path.read_text() or "{}")
+snippet = json.loads(snippet_path.read_text())
+settings.setdefault("hooks", {})
+
+for event_name, entries in snippet.items():
+    target_entries = settings["hooks"].setdefault(event_name, [])
+    existing_commands = {
+        hook.get("command")
+        for entry in target_entries
+        for hook in entry.get("hooks", [])
+        if isinstance(hook, dict)
+    }
+    for entry in entries:
+        hooks = entry.get("hooks", [])
+        commands = [hook.get("command") for hook in hooks if isinstance(hook, dict)]
+        if any(command in existing_commands for command in commands):
+            continue
+        target_entries.append(entry)
+        existing_commands.update(command for command in commands if command)
+
+settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+PY
+
+echo "Merged managed hooks into $SETTINGS."
+echo
+echo "Done. Restart Claude Code, then:"
+echo "  /smart                  - toggle smart mode ON/OFF for the session"
+echo "  /smart <task>           - one-shot smart routing for a single task"
+echo "  /effort ultracode       - toggle ultracode dynamic workflow mode"
+echo "  smart doctor            - check install health"
+echo "  smart --why \"task\"      - explain route selection"
