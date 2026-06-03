@@ -13,8 +13,21 @@ mkdir -p "$COMMANDS_DIR"
 # Copy command and inject files
 cp commands/smart.md "$COMMANDS_DIR/smart.md"
 cp smart-inject.md "$CLAUDE_DIR/smart-inject.md"
+cp smart-toggle.sh "$CLAUDE_DIR/smart-toggle.sh"
+chmod +x "$CLAUDE_DIR/smart-toggle.sh"
 
 echo "Copied command files."
+
+# Add shell alias
+SHELL_RC="$HOME/.zshrc"
+[ -n "$BASH_VERSION" ] && SHELL_RC="$HOME/.bashrc"
+
+if grep -q "alias smart=" "$SHELL_RC" 2>/dev/null; then
+  echo "Shell alias already exists in $SHELL_RC, skipping."
+else
+  echo "\nalias smart='bash ~/.claude/smart-toggle.sh'" >> "$SHELL_RC"
+  echo "Added 'smart' alias to $SHELL_RC — run 'source $SHELL_RC' or restart your terminal."
+fi
 
 # Patch settings.json with the hooks
 if [ ! -f "$SETTINGS" ]; then

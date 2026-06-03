@@ -4,15 +4,7 @@ You have two modes depending on whether arguments were provided:
 
 ## Mode A — Toggle smart mode (no arguments, $ARGUMENTS is empty or whitespace only)
 
-Run this bash to check the current state:
-```
-[ -f "/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}" ] && echo ON || echo OFF
-```
-
-- If output is `ON`: run `rm "/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}"` then tell the user: **Smart mode OFF** — prompts will use default settings.
-- If output is `OFF`: run `touch "/tmp/claude-smart-${CLAUDE_SESSION_ID:-default}"` then tell the user: **Smart mode ON** — every prompt will now auto-select model, effort, permission mode, and plan mode. Mode resets to OFF when this session ends.
-
-Do nothing else. Stop here.
+Run `bash ~/.claude/smart-toggle.sh` and print its output verbatim. Do nothing else. Stop here.
 
 ---
 

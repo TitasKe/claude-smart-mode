@@ -45,18 +45,26 @@ Runs smart routing on that task only, without affecting the session toggle.
 ## Install
 
 ```bash
-git clone https://github.com/TitasSul/claude-smart-mode.git
+git clone https://github.com/TitasKe/claude-smart-mode.git
 cd claude-smart-mode
 chmod +x install.sh
 ./install.sh
 ```
 
-Then restart Claude Code.
+Then restart your terminal and Claude Code.
+
+After install you get two ways to toggle:
+
+| Method | Where | Speed |
+|--------|-------|-------|
+| `smart` (shell alias) | any terminal | instant — no Claude involved |
+| `/smart` (slash command) | inside Claude Code | fast — single bash call |
 
 ## Manual install
 
 1. Copy `commands/smart.md` → `~/.claude/commands/smart.md`
 2. Copy `smart-inject.md` → `~/.claude/smart-inject.md`
+3. Copy `smart-toggle.sh` → `~/.claude/smart-toggle.sh` and `chmod +x` it
 3. Merge `hooks-snippet.json` into the `"hooks"` key of `~/.claude/settings.json`
 
 ## How it works
